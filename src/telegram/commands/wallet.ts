@@ -4,6 +4,9 @@ import {
     importWallet,
     saveUserWallet,
     getUserWallet,
+    getUserWallets,
+    switchActiveWallet,
+    deleteWallet,
     deleteUserWallet,
     getWalletBalance,
     transferSol
@@ -39,35 +42,87 @@ export async function walletCommand(ctx: Context) {
                 getTokenBalances(wallet.publicKey)
             ]);
 
-            let message = `💳 *Your Wallet*\n\n` +
+            let message = `💳 *Wallet Dashboard: ${wallet.label}*\n\n` +
                 `*Address:*\n\`${wallet.publicKey}\`\n\n` +
                 `*SOL Balance:* ${balance.toFixed(4)} SOL\n\n`;
 
             if (tokens.length > 0) {
                 message += `*Token Holdings:*\n`;
-                tokens.slice(0, 10).forEach(t => {
+                tokens.slice(0, 5).forEach(t => {
                     const amt = parseFloat(t.amountFormatted);
                     message += `• ${amt.toFixed(4)} *${t.symbol}*\n`;
                 });
-                if (tokens.length > 10) message += `_...and ${tokens.length - 10} more tokens._\n`;
+                if (tokens.length > 5) message += `_...and ${tokens.length - 5} more tokens._\n`;
                 message += `\n`;
             }
 
-            message += `[View on Solscan](https://solscan.io/account/${wallet.publicKey})\n\n` +
-                `_Commands:_\n` +
-                `• \`/wallet export\` - Show private key\n` +
-                `• \`/wallet delete\` - Remove wallet\n` +
-                `• \`/wallet collect <address>\` - Withdraw SOL`;
+            message += `_Use \`/wallet list\` to manage multiple wallets._`;
 
-            await ctx.reply(message, { parse_mode: 'Markdown' });
+            const markup = {
+                inline_keyboard: [
+                    [
+                        { text: '🔄 Refresh', callback_data: `refresh_wallet` },
+                        { text: '📋 List All', callback_data: `list_wallets` }
+                    ],
+                    [
+                        { text: '🔐 Show Key', callback_data: `export_wallet` },
+                        { text: '🗑️ Delete', callback_data: `delete_wallet_confirm` }
+                    ],
+                    [
+                        { text: '📤 Withdraw', callback_data: `view_withdraw` }
+                    ]
+                ]
+            };
+
+            await ctx.reply(message, { parse_mode: 'Markdown', reply_markup: markup });
         } catch (error) {
             await ctx.reply(
-                `💳 *Your Wallet*\n\n` +
+                `💳 *Your Wallet: ${wallet.label}*\n\n` +
                 `*Address:*\n\`${wallet.publicKey}\`\n\n` +
-                `_Balance check failed. Network may be slow._`,
-                { parse_mode: 'Markdown' }
+                `_Balance check failed. Network may be slow._`
             );
         }
+        return;
+    }
+
+    // List all wallets
+    if (subCommand === 'list') {
+        const wallets = getUserWallets(userId);
+        if (wallets.length === 0) {
+            await ctx.reply('❌ No wallets found.');
+            return;
+        }
+
+        let message = `📋 *Your Wallets*\n\n`;
+        const buttons: { text: string; callback_data: string }[][] = [];
+
+        wallets.forEach((w, i) => {
+            const status = w.isActive ? '✅ *ACTIVE*' : '';
+            message += `${i + 1}. *${w.label}* ${status}\n\`${w.publicKey}\`\n\n`;
+
+            buttons.push([{ text: `${w.isActive ? '⏺ ' : ''}${w.label}`, callback_data: `select_wallet_${w.id}` }]);
+        });
+
+        message += `_Click a button below to switch active wallet._`;
+
+        await ctx.reply(message, {
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: buttons }
+        });
+        return;
+    }
+
+    // Switch wallet
+    if (subCommand === 'select' || subCommand === 'switch') {
+        const walletId = parseInt(args[1]);
+        if (isNaN(walletId)) {
+            await ctx.reply('Usage: `/wallet select <id>`');
+            return;
+        }
+
+        switchActiveWallet(userId, walletId);
+        const active = getUserWallet(userId);
+        await ctx.reply(`✅ Switched to *${active?.label}*`, { parse_mode: 'Markdown' });
         return;
     }
 

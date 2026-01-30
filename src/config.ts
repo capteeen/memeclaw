@@ -11,6 +11,7 @@ export const config = {
     // Solana
     solanaRpcUrl: process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
     solanaPrivateKey: process.env.SOLANA_PRIVATE_KEY,
+    dbPath: process.env.DB_PATH || './memeclaw.db',
 
     // Trading Safety
     slippageBps: parseInt(process.env.SLIPPAGE_BPS || '500'),

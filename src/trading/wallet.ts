@@ -9,12 +9,17 @@ const connection = new Connection(config.solanaRpcUrl, 'confirmed');
 export function initWalletsTable() {
     db.exec(`
     CREATE TABLE IF NOT EXISTS wallets (
-      user_id INTEGER PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
       public_key TEXT NOT NULL,
       private_key TEXT NOT NULL,
+      is_active INTEGER DEFAULT 0,
+      label TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+    // Create index
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id);`);
 }
 
 /**
@@ -53,35 +58,95 @@ export function importWallet(privateKeyBase58: string): { publicKey: string; pri
 /**
  * Save wallet for a user
  */
-export function saveUserWallet(userId: number, publicKey: string, privateKey: string) {
+export function saveUserWallet(userId: number, publicKey: string, privateKey: string, label?: string) {
+    // Check if user has any wallets
+    const count = db.prepare('SELECT COUNT(*) as cnt FROM wallets WHERE user_id = ?').get(userId) as { cnt: number };
+    const isActive = count.cnt === 0 ? 1 : 0; // First wallet is active by default
+
     const stmt = db.prepare(`
-    INSERT OR REPLACE INTO wallets (user_id, public_key, private_key)
-    VALUES (?, ?, ?)
-  `);
-    stmt.run(userId, publicKey, privateKey);
+        INSERT INTO wallets (user_id, public_key, private_key, is_active, label)
+        VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(userId, publicKey, privateKey, isActive, label || `Wallet ${count.cnt + 1}`);
 }
 
 /**
- * Get wallet for a user
+ * Get active wallet for a user
  */
-export function getUserWallet(userId: number): { publicKey: string; privateKey: string } | null {
-    const stmt = db.prepare('SELECT public_key, private_key FROM wallets WHERE user_id = ?');
-    const row = stmt.get(userId) as { public_key: string; private_key: string } | undefined;
+export function getUserWallet(userId: number): { publicKey: string; privateKey: string; id: number; label: string } | null {
+    const stmt = db.prepare('SELECT id, public_key, private_key, label FROM wallets WHERE user_id = ? AND is_active = 1');
+    const row = stmt.get(userId) as { id: number; public_key: string; private_key: string; label: string } | undefined;
 
-    if (!row) return null;
+    if (!row) {
+        // Fallback to first wallet if no active one found
+        const first = db.prepare('SELECT id, public_key, private_key, label FROM wallets WHERE user_id = ? LIMIT 1').get(userId) as any;
+        if (!first) return null;
+        return {
+            id: first.id,
+            publicKey: first.public_key,
+            privateKey: first.private_key,
+            label: first.label,
+        };
+    }
 
     return {
+        id: row.id,
         publicKey: row.public_key,
         privateKey: row.private_key,
+        label: row.label,
     };
 }
 
 /**
- * Delete wallet for a user
+ * Get all wallets for a user
+ */
+export function getUserWallets(userId: number): { id: number; publicKey: string; label: string; isActive: boolean }[] {
+    const stmt = db.prepare('SELECT id, public_key, label, is_active FROM wallets WHERE user_id = ? ORDER BY created_at ASC');
+    const rows = stmt.all(userId) as any[];
+
+    return rows.map(r => ({
+        id: r.id,
+        publicKey: r.public_key,
+        label: r.label,
+        isActive: r.is_active === 1
+    }));
+}
+
+/**
+ * Switch active wallet
+ */
+export function switchActiveWallet(userId: number, walletId: number) {
+    db.transaction(() => {
+        db.prepare('UPDATE wallets SET is_active = 0 WHERE user_id = ?').run(userId);
+        db.prepare('UPDATE wallets SET is_active = 1 WHERE user_id = ? AND id = ?').run(userId, walletId);
+    })();
+}
+
+/**
+ * Delete a specific wallet
+ */
+export function deleteWallet(userId: number, walletId: number) {
+    const stmt = db.prepare('DELETE FROM wallets WHERE user_id = ? AND id = ?');
+    stmt.run(userId, walletId);
+
+    // If we deleted the active wallet, set another one as active
+    const active = db.prepare('SELECT id FROM wallets WHERE user_id = ? AND is_active = 1').get(userId);
+    if (!active) {
+        const first = db.prepare('SELECT id FROM wallets WHERE user_id = ? LIMIT 1').get(userId) as any;
+        if (first) {
+            db.prepare('UPDATE wallets SET is_active = 1 WHERE id = ?').run(first.id);
+        }
+    }
+}
+
+/**
+ * Keep for backward compatibility but redirect to deleteWallet
  */
 export function deleteUserWallet(userId: number) {
-    const stmt = db.prepare('DELETE FROM wallets WHERE user_id = ?');
-    stmt.run(userId);
+    const wallet = getUserWallet(userId);
+    if (wallet) {
+        deleteWallet(userId, wallet.id);
+    }
 }
 
 /**

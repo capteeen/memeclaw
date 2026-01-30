@@ -1,11 +1,23 @@
 import Database, { Database as DatabaseType } from 'better-sqlite3';
-import { dirname, join } from 'path';
+import { dirname, join, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import { config } from '../config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbPath = join(__dirname, '../../memeclaw.db');
 
-export const db: DatabaseType = new Database(dbPath);
+// Resolve database path
+const absoluteDbPath = isAbsolute(config.dbPath)
+  ? config.dbPath
+  : join(__dirname, '../../', config.dbPath);
+
+// Ensure directory exists
+const dbDir = dirname(absoluteDbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+export const db: DatabaseType = new Database(absoluteDbPath);
 
 // Initialize database schema - MUST be called before using any helpers
 export function initDatabase() {
@@ -35,18 +47,24 @@ export function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Signals log for sentiment triggers
-    CREATE TABLE IF NOT EXISTS signals (
+    -- Wallets table
+    CREATE TABLE IF NOT EXISTS wallets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      source TEXT NOT NULL,
-      tweet_id TEXT,
-      author TEXT,
-      content TEXT,
-      sentiment_score REAL,
-      action_taken TEXT,
+      user_id INTEGER NOT NULL,
+      public_key TEXT NOT NULL,
+      private_key TEXT NOT NULL,
+      is_active INTEGER DEFAULT 0,
+      label TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Migration: If wallets table exists with old schema, we might need a backup or manual fix
+  // For now, assume fresh or simple expansion if possible. 
+  // SQLite doesn't support DROP COLUMN easily, so we usually rename/copy.
+
+  // Create index for fast lookups
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id);`);
 
   // Check if default watchlist items exist
   const count = db.prepare('SELECT COUNT(*) as cnt FROM watchlist').get() as { cnt: number };
