@@ -2,6 +2,7 @@ import { Context } from 'telegraf';
 import { config } from '../../config.js';
 import { positions } from '../../db/sqlite.js';
 import { executeSwap, getQuote } from '../../trading/jupiter.js';
+import { getTokenMetadata } from '../../trading/moralis.js';
 
 export async function snipeCommand(ctx: Context) {
     const text = (ctx.message as any)?.text || '';
@@ -63,7 +64,10 @@ export async function snipeCommand(ctx: Context) {
 
     // Real trading flow
     try {
-        await ctx.reply(`🔄 Getting quote for ${amountSol} SOL → Token...`);
+        const metadata = await getTokenMetadata(tokenAddress);
+        const tokenName = metadata ? `${metadata.name} (${metadata.symbol})` : 'Token';
+
+        await ctx.reply(`🔄 Getting quote for ${amountSol} SOL → ${tokenName}...`);
 
         const quote = await getQuote(tokenAddress, amountSol);
 
@@ -73,7 +77,7 @@ export async function snipeCommand(ctx: Context) {
         }
 
         await ctx.reply(
-            `📝 *Quote Received*\n\n` +
+            `📝 *Quote Received: ${tokenName}*\n\n` +
             `Input: ${amountSol} SOL\n` +
             `Output: ${quote.outAmount} tokens\n` +
             `Price Impact: ${quote.priceImpactPct || 'N/A'}%\n\n` +

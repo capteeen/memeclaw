@@ -5,6 +5,7 @@ import { snipeCommand } from './commands/snipe.js';
 import { watchlistCommand } from './commands/watchlist.js';
 import { helpCommand } from './commands/help.js';
 import { walletCommand } from './commands/wallet.js';
+import { tokenCommand } from './commands/token.js';
 import { getUserWallet } from '../trading/wallet.js';
 
 export const bot = new Telegraf(config.telegramBotToken);
@@ -70,6 +71,7 @@ export function setupBot() {
     bot.command('snipe', snipeCommand);
     bot.command('watchlist', watchlistCommand);
     bot.command('collect', walletCommand);
+    bot.command('token', tokenCommand);
     bot.command('help', helpCommand);
 
     // Error handling
@@ -89,6 +91,7 @@ export async function startBot() {
         { command: 'wallet', description: '💳 Create or manage wallet' },
         { command: 'status', description: '📊 View positions & P&L' },
         { command: 'snipe', description: '🎯 Buy a token' },
+        { command: 'token', description: '🔎 View token info' },
         { command: 'watchlist', description: '📋 Manage keywords' },
         { command: 'collect', description: '💳 Withdraw SOL' },
         { command: 'help', description: '❓ Show all commands' },

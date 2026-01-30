@@ -19,11 +19,14 @@ export const config = {
 
     // Twitter
     twitterBearerToken: process.env.TWITTER_BEARER_TOKEN,
+
+    // Moralis
+    moralisApiKey: process.env.MORALIS_API_KEY!,
 };
 
 // Validate required config
 export function validateConfig() {
-    const required = ['telegramBotToken', 'openaiApiKey'] as const;
+    const required = ['telegramBotToken', 'openaiApiKey', 'moralisApiKey'] as const;
     const missing = required.filter(key => !config[key]);
 
     if (missing.length > 0) {
