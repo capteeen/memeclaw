@@ -82,6 +82,16 @@ export function setupBot() {
 }
 
 export async function startBot() {
+    // Register commands with Telegram (shows menu when user types /)
+    await bot.telegram.setMyCommands([
+        { command: 'start', description: '🚀 Start the bot' },
+        { command: 'wallet', description: '💳 Create or manage wallet' },
+        { command: 'status', description: '📊 View positions & P&L' },
+        { command: 'snipe', description: '🎯 Buy a token' },
+        { command: 'watchlist', description: '📋 Manage keywords' },
+        { command: 'help', description: '❓ Show all commands' },
+    ]);
+
     await bot.launch();
     console.log('🚀 MemeClaw bot is running!');
 
