@@ -1,4 +1,5 @@
 import { Keypair, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import bs58 from 'bs58';
 import { config } from '../config.js';
 import { db } from '../db/sqlite.js';
 
@@ -23,7 +24,6 @@ export function generateWallet(): { publicKey: string; privateKey: string } {
     const keypair = Keypair.generate();
 
     // Convert to base58 for storage
-    const bs58 = require('bs58');
     const privateKeyBase58 = bs58.encode(keypair.secretKey);
 
     return {
@@ -37,7 +37,6 @@ export function generateWallet(): { publicKey: string; privateKey: string } {
  */
 export function importWallet(privateKeyBase58: string): { publicKey: string; privateKey: string } | null {
     try {
-        const bs58 = require('bs58');
         const privateKeyBytes = bs58.decode(privateKeyBase58);
         const keypair = Keypair.fromSecretKey(privateKeyBytes);
 
@@ -105,7 +104,6 @@ export async function getWalletBalance(publicKey: string): Promise<number> {
  */
 export function getKeypairFromPrivateKey(privateKeyBase58: string): Keypair | null {
     try {
-        const bs58 = require('bs58');
         const privateKeyBytes = bs58.decode(privateKeyBase58);
         return Keypair.fromSecretKey(privateKeyBytes);
     } catch {
