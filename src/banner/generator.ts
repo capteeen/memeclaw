@@ -33,7 +33,7 @@ export async function generateBanner(
             quality: 'standard',
         });
 
-        const imageUrl = response.data[0]?.url;
+        const imageUrl = response.data?.[0]?.url;
         console.log(`🎨 Banner generated for ${tokenName}`);
         return imageUrl || null;
     } catch (error) {
@@ -55,7 +55,7 @@ export async function generateCustomImage(prompt: string): Promise<string | null
             quality: 'standard',
         });
 
-        return response.data[0]?.url || null;
+        return response.data?.[0]?.url || null;
     } catch (error) {
         console.error('Image generation error:', error);
         return null;

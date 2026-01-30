@@ -44,7 +44,7 @@ export async function getQuote(
             return null;
         }
 
-        const quote = await response.json();
+        const quote = await response.json() as JupiterQuote;
         return quote;
     } catch (error) {
         console.error('Error getting Jupiter quote:', error);
@@ -94,7 +94,7 @@ export async function executeSwap(quote: JupiterQuote): Promise<{
             return { success: false, error: `Swap API error: ${error}` };
         }
 
-        const { swapTransaction } = await swapResponse.json();
+        const { swapTransaction } = await swapResponse.json() as { swapTransaction: string };
 
         // Deserialize and sign transaction
         const transactionBuffer = Buffer.from(swapTransaction, 'base64');

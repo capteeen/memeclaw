@@ -1,11 +1,11 @@
-import Database from 'better-sqlite3';
+import Database, { Database as DatabaseType } from 'better-sqlite3';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = join(__dirname, '../../memeclaw.db');
 
-export const db = new Database(dbPath);
+export const db: DatabaseType = new Database(dbPath);
 
 // Initialize database schema - MUST be called before using any helpers
 export function initDatabase() {
