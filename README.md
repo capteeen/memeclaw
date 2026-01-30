@@ -1,6 +1,6 @@
 # MemeClaw 🦞
 
-A proactive crypto trading bot that monitors social sentiment, executes Solana trades via Jupiter, and provides a Telegram command center.
+An OpenClaw-powered crypto trading bot that analyzes social sentiment to execute lightning-fast Solana trades and provides a Telegram command center.
 
 ## Features
 
