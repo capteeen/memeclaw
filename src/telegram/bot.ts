@@ -69,6 +69,7 @@ export function setupBot() {
     bot.command('status', statusCommand);
     bot.command('snipe', snipeCommand);
     bot.command('watchlist', watchlistCommand);
+    bot.command('collect', walletCommand);
     bot.command('help', helpCommand);
 
     // Error handling
@@ -89,6 +90,7 @@ export async function startBot() {
         { command: 'status', description: '📊 View positions & P&L' },
         { command: 'snipe', description: '🎯 Buy a token' },
         { command: 'watchlist', description: '📋 Manage keywords' },
+        { command: 'collect', description: '💳 Withdraw SOL' },
         { command: 'help', description: '❓ Show all commands' },
     ]);
 
