@@ -6,7 +6,7 @@ A proactive crypto trading bot that monitors social sentiment, executes Solana t
 
 - **Telegram Command Center** - Control everything from your phone
 - **Jupiter V6 Integration** - Fast swaps on Solana
-- **Sentiment Analysis** - GPT-4o-mini powered tweet analysis
+- **Sentiment Analysis** - OpenClaw powered tweet analysis
 - **Banner Generation** - DALL-E 3 viral images for milestones
 
 ## Quick Start

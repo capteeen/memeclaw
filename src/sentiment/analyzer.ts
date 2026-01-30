@@ -12,7 +12,7 @@ export interface SentimentResult {
 }
 
 /**
- * Analyze sentiment of a tweet using GPT-4o-mini
+ * Analyze sentiment of a tweet using OpenClaw
  */
 export async function analyzeSentiment(
     tweetContent: string,
