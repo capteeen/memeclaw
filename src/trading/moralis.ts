@@ -75,7 +75,54 @@ export async function getTokenPrice(address: string): Promise<{ price: number; m
         }
         return null;
     } catch (error) {
-        console.error('Error fetching token price:', error);
         return null;
+    }
+}
+
+export interface TokenBalance {
+    mint: string;
+    symbol: string;
+    name: string;
+    amount: number;
+    decimals: number;
+    amountFormatted: string;
+    priceUsd?: number;
+    valueUsd?: number;
+}
+
+/**
+ * Fetch all token balances for a wallet from Moralis
+ */
+export async function getTokenBalances(address: string): Promise<TokenBalance[]> {
+    try {
+        const url = `https://solana-gateway.moralis.io/account/mainnet/${address}/tokens?excludeSpam=true`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'accept': 'application/json',
+                'X-API-Key': config.moralisApiKey
+            }
+        });
+
+        if (!response.ok) {
+            console.error(`Moralis API error: ${response.status} ${response.statusText}`);
+            return [];
+        }
+
+        const data = await response.json() as any[];
+
+        return data.map(token => ({
+            mint: token.mint,
+            symbol: token.symbol,
+            name: token.name,
+            amount: parseFloat(token.amount),
+            decimals: token.decimals,
+            amountFormatted: token.amountFormatted,
+            // Moralis might not include price here directly in this endpoint
+        }));
+    } catch (error) {
+        console.error('Error fetching token balances:', error);
+        return [];
     }
 }

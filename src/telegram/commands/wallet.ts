@@ -8,6 +8,7 @@ import {
     getWalletBalance,
     transferSol
 } from '../../trading/wallet.js';
+import { getTokenBalances } from '../../trading/moralis.js';
 
 export async function walletCommand(ctx: Context) {
     const userId = ctx.from?.id;
@@ -33,18 +34,32 @@ export async function walletCommand(ctx: Context) {
         }
 
         try {
-            const balance = await getWalletBalance(wallet.publicKey);
+            const [balance, tokens] = await Promise.all([
+                getWalletBalance(wallet.publicKey),
+                getTokenBalances(wallet.publicKey)
+            ]);
 
-            await ctx.reply(
-                `💳 *Your Wallet*\n\n` +
+            let message = `💳 *Your Wallet*\n\n` +
                 `*Address:*\n\`${wallet.publicKey}\`\n\n` +
-                `*Balance:* ${balance.toFixed(4)} SOL\n\n` +
-                `[View on Solscan](https://solscan.io/account/${wallet.publicKey})\n\n` +
+                `*SOL Balance:* ${balance.toFixed(4)} SOL\n\n`;
+
+            if (tokens.length > 0) {
+                message += `*Token Holdings:*\n`;
+                tokens.slice(0, 10).forEach(t => {
+                    const amt = parseFloat(t.amountFormatted);
+                    message += `• ${amt.toFixed(4)} *${t.symbol}*\n`;
+                });
+                if (tokens.length > 10) message += `_...and ${tokens.length - 10} more tokens._\n`;
+                message += `\n`;
+            }
+
+            message += `[View on Solscan](https://solscan.io/account/${wallet.publicKey})\n\n` +
                 `_Commands:_\n` +
                 `• \`/wallet export\` - Show private key\n` +
-                `• \`/wallet delete\` - Remove wallet`,
-                { parse_mode: 'Markdown' }
-            );
+                `• \`/wallet delete\` - Remove wallet\n` +
+                `• \`/wallet collect <address>\` - Withdraw SOL`;
+
+            await ctx.reply(message, { parse_mode: 'Markdown' });
         } catch (error) {
             await ctx.reply(
                 `💳 *Your Wallet*\n\n` +
