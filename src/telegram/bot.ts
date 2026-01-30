@@ -29,9 +29,6 @@ const adminOnly = (ctx: Context, next: () => Promise<void>) => {
 };
 
 export function setupBot() {
-    // Apply admin check to all messages
-    bot.use(adminOnly);
-
     // Register commands
     bot.command('start', async (ctx) => {
         const userId = ctx.from?.id;
