@@ -5,7 +5,8 @@ import {
     saveUserWallet,
     getUserWallet,
     deleteUserWallet,
-    getWalletBalance
+    getWalletBalance,
+    transferSol
 } from '../../trading/wallet.js';
 
 export async function walletCommand(ctx: Context) {
@@ -180,7 +181,7 @@ export async function walletCommand(ctx: Context) {
                 `This will remove your wallet from the bot.\n` +
                 `Make sure you have saved your private key!\n\n` +
                 `To confirm, type:\n` +
-                `\`/wallet delete confirm\``,
+                `\n\`/wallet delete confirm\``,
                 { parse_mode: 'Markdown' }
             );
             return;
@@ -191,12 +192,73 @@ export async function walletCommand(ctx: Context) {
         return;
     }
 
+    // Collect SOL (Withdraw)
+    if (subCommand === 'collect' || subCommand === 'withdraw') {
+        const wallet = getUserWallet(userId);
+        if (!wallet) {
+            await ctx.reply('❌ No wallet connected.');
+            return;
+        }
+
+        const toAddress = args[1];
+        const amountStr = args[2];
+
+        if (!toAddress) {
+            await ctx.reply(
+                `💳 *Collect funds (Withdraw)*\n\n` +
+                `Usage: \`/wallet collect <address> [amount]\`\n\n` +
+                `Example: \`/wallet collect Gv... 0.1\`\n` +
+                `_If amount is omitted, it will withdraw the full balance (minus fees)._`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+
+        try {
+            const balance = await getWalletBalance(wallet.publicKey);
+            let amount = amountStr ? parseFloat(amountStr) : balance - 0.001; // Subtract rent/fee buffer
+
+            if (amount <= 0) {
+                await ctx.reply('❌ Insufficient balance for fee.');
+                return;
+            }
+
+            const statusMsg = await ctx.reply(`🕒 Sending ${amount.toFixed(4)} SOL...`);
+
+            const result = await transferSol(wallet.privateKey, toAddress, amount);
+
+            if (result.success) {
+                await ctx.telegram.editMessageText(
+                    ctx.chat?.id,
+                    statusMsg.message_id,
+                    undefined,
+                    `✅ *Funds Collected!*\n\n` +
+                    `*Sent:* ${amount.toFixed(4)} SOL\n` +
+                    `*To:* \`${toAddress}\`\n\n` +
+                    `[View Transaction](https://solscan.io/tx/${result.txSignature})`,
+                    { parse_mode: 'Markdown' }
+                );
+            } else {
+                await ctx.telegram.editMessageText(
+                    ctx.chat?.id,
+                    statusMsg.message_id,
+                    undefined,
+                    `❌ *Transfer Failed*\n\nError: ${result.error}`
+                );
+            }
+        } catch (error) {
+            await ctx.reply('❌ An error occurred during transfer.');
+        }
+        return;
+    }
+
     // Unknown subcommand
     await ctx.reply(
         `💳 *Wallet Commands*\n\n` +
         `/wallet - Show wallet info & balance\n` +
         `/wallet create - Generate new wallet\n` +
         `/wallet import <key> - Import existing\n` +
+        `/wallet collect <address> - Withdraw SOL\n` +
         `/wallet export - Show private key\n` +
         `/wallet delete - Remove wallet`,
         { parse_mode: 'Markdown' }

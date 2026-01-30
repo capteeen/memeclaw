@@ -110,3 +110,39 @@ export function getKeypairFromPrivateKey(privateKeyBase58: string): Keypair | nu
         return null;
     }
 }
+
+/**
+ * Transfer SOL from a bot wallet to an external address
+ */
+export async function transferSol(
+    senderPrivateKey: string,
+    toAddress: string,
+    amountSol: number
+): Promise<{ success: boolean; txSignature?: string; error?: string }> {
+    try {
+        const { Transaction, SystemProgram, PublicKey, sendAndConfirmTransaction } = await import('@solana/web3.js');
+        const bs58 = (await import('bs58')).default;
+
+        const senderKeypair = Keypair.fromSecretKey(bs58.decode(senderPrivateKey));
+        const toPubKey = new PublicKey(toAddress);
+
+        const transaction = new Transaction().add(
+            SystemProgram.transfer({
+                fromPubkey: senderKeypair.publicKey,
+                toPubkey: toPubKey,
+                lamports: Math.floor(amountSol * LAMPORTS_PER_SOL),
+            })
+        );
+
+        const signature = await sendAndConfirmTransaction(connection, transaction, [senderKeypair]);
+
+        return { success: true, txSignature: signature };
+    } catch (error) {
+        console.error('Transfer error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
