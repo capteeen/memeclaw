@@ -58,12 +58,18 @@ export function setupBot() {
             await ctx.reply(
                 `🦞 *MemeClaw Bot Active*\n\n` +
                 `💳 Wallet: \`${wallet.publicKey.slice(0, 8)}...${wallet.publicKey.slice(-8)}\`\n\n` +
-                `*Commands:*\n` +
+                `*Trading Commands:*\n` +
                 `/wallet - View wallet & balance\n` +
                 `/status - View positions & P&L\n` +
-                `/snipe <address> <sol> - Buy a token\n` +
-                `/watchlist - Sentiment keywords\n` +
-                `/help - All commands`,
+                `/snipe <address> <sol> - Buy a token\n\n` +
+                `*Social Features:*\n` +
+                `/scan - Search for bullish signals\n` +
+                `/generate <token> - AI tweet ideas\n` +
+                `/tweet <msg> - Post to Twitter/X\n` +
+                `/monitor - Social scan status\n\n` +
+                `*More:*\n` +
+                `/watchlist - Manage keywords\n` +
+                `/help - View all commands`,
                 { parse_mode: 'Markdown' }
             );
         }
