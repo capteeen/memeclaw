@@ -3,7 +3,8 @@ import { config } from '../../config.js';
 
 export async function helpCommand(ctx: Context) {
   const message = `
-🦞 *MemeClaw - Crypto Trading Bot*
+🦞 *MemeClaw - AI Trading Bot*
+🌐 [Website](https://memeclaw.fun) | 🐦 [X (Twitter)](https://x.com/memeclawdotfun)
 
 *Wallet Commands:*
 /wallet - View your wallet & balance

@@ -58,7 +58,8 @@ export function setupBot() {
         } else {
             // Has wallet - show main menu
             await ctx.reply(
-                `🦞 *MemeClaw Bot Active*\n\n` +
+                `🦞 *MemeClaw - AI Trading Bot*\n\n` +
+                `🌐 [Website](https://memeclaw.fun) | 🐦 [X (Twitter)](https://x.com/memeclawdotfun)\n\n` +
                 `💳 Wallet: \`${wallet.publicKey.slice(0, 8)}...${wallet.publicKey.slice(-8)}\`\n\n` +
                 `*Trading Commands:*\n` +
                 `/wallet - View wallet & balance\n` +
