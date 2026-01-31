@@ -16,15 +16,22 @@ export async function helpCommand(ctx: Context) {
 /status - View positions & P&L
 /snipe <address> <sol> - Buy a token
 
+*Social Features:*
+/scan - Detect bullish signals now
+/tweet <msg> - Post to Twitter/X
+/generate <token> - AI tweet generation
+/monitor - Social monitor status
+
 *Watchlist Commands:*
-/watchlist - View active keywords
-/watchlist add keyword <keyword>
+/watchlist - View active items
+/watchlist add keyword <word>
 /watchlist add influencer <handle>
 /watchlist remove <id>
 
-*Coming Soon:*
-/raid <tweet_url> - Engagement raid
+*Other:*
 /banner <token> - Generate viral image
+/token <address> - View token info
+/collect - Withdraw SOL
 
 *Current Settings:*
 • Max buy: ${config.maxBuySol} SOL

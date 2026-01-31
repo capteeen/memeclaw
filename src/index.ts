@@ -2,6 +2,7 @@ import { validateConfig } from './config.js';
 import { initDatabase } from './db/sqlite.js';
 import { initWalletsTable } from './trading/wallet.js';
 import { setupBot, startBot } from './telegram/bot.js';
+import { initSignalsTable, startMonitor } from './social/monitor.js';
 
 async function main() {
     console.log(`
@@ -20,10 +21,14 @@ async function main() {
         console.log('📦 Initializing database...');
         initDatabase();
         initWalletsTable();
+        initSignalsTable();
 
         // Setup and start Telegram bot
         console.log('🤖 Setting up Telegram bot...');
         setupBot();
+
+        // Start social monitor (will only run if configured)
+        startMonitor();
 
         await startBot();
     } catch (error) {

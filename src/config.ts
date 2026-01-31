@@ -20,6 +20,13 @@ export const config = {
 
     // Twitter
     twitterBearerToken: process.env.TWITTER_BEARER_TOKEN,
+    twitterApiKey: process.env.TWITTER_API_KEY,
+    twitterApiSecret: process.env.TWITTER_API_SECRET,
+    twitterAccessToken: process.env.TWITTER_ACCESS_TOKEN,
+    twitterAccessSecret: process.env.TWITTER_ACCESS_SECRET,
+
+    // Social Monitoring
+    socialMonitorInterval: parseInt(process.env.SOCIAL_MONITOR_INTERVAL || '60000'),
 
     // Moralis
     moralisApiKey: process.env.MORALIS_API_KEY!,
