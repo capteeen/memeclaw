@@ -1,6 +1,8 @@
 # MemeClaw 🦞
 
-MemeClaw leverages OpenClaw (moltbot) analysis to monitor social sentiment and execute trades automatically. Generate viral content and dominate the market - all from your Telegram.
+**First ever Telegram trading bot that uses OpenClaw to analyze social sentiment and automatically execute trades.**
+
+Generate viral content and dominate the market - all from your Telegram.
 
 ## Features
 
