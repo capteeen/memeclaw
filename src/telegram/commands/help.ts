@@ -20,6 +20,8 @@ export async function helpCommand(ctx: Context) {
 /scan - Detect bullish signals now
 /tweet <msg> - Post to Twitter/X
 /generate <token> - AI tweet generation
+/link - Connect your own Twitter
+/verify <PIN> - Complete linking account
 /monitor - Social monitor status
 
 *Watchlist Commands:*

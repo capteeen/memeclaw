@@ -174,9 +174,15 @@ export class TwitterClient {
     /**
      * Post a tweet using OAuth 1.0a
      */
-    async postTweet(text: string): Promise<{ id: string; text: string }> {
-        if (!this.canPost()) {
-            throw new Error('Twitter OAuth credentials not configured. Set TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_SECRET');
+    async postTweet(
+        text: string,
+        customCreds?: { accessToken: string; accessSecret: string }
+    ): Promise<{ id: string; text: string }> {
+        const accessToken = customCreds?.accessToken || this.accessToken;
+        const accessSecret = customCreds?.accessSecret || this.accessSecret;
+
+        if (!accessToken || !accessSecret || !this.apiKey || !this.apiSecret) {
+            throw new Error('Twitter OAuth credentials not configured.');
         }
 
         const url = 'https://api.twitter.com/2/tweets';
@@ -184,7 +190,7 @@ export class TwitterClient {
         const body = JSON.stringify({ text });
 
         // Generate OAuth 1.0a header
-        const authHeader = this.generateOAuthHeader(method, url);
+        const authHeader = this.generateOAuthHeader(method, url, {}, accessToken, accessSecret);
 
         const response = await fetch(url, {
             method,
@@ -208,17 +214,89 @@ export class TwitterClient {
     }
 
     /**
+     * Step 1: Get OAuth Request Token
+     */
+    async getRequestToken(callbackUrl: string = 'oob'): Promise<{ token: string; secret: string }> {
+        const url = 'https://api.twitter.com/oauth/request_token';
+        const method = 'POST';
+
+        const params = { oauth_callback: callbackUrl };
+        const authHeader = this.generateOAuthHeader(method, url, params);
+
+        const response = await fetch(`${url}?oauth_callback=${encodeURIComponent(callbackUrl)}`, {
+            method,
+            headers: { 'Authorization': authHeader },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to get request token: ${await response.text()}`);
+        }
+
+        const text = await response.text();
+        const data = Object.fromEntries(new URLSearchParams(text));
+
+        return {
+            token: data.oauth_token,
+            secret: data.oauth_token_secret,
+        };
+    }
+
+    /**
+     * Step 3: Exchange PIN/Verifier for Access Token
+     */
+    async getAccessToken(
+        requestToken: string,
+        requestSecret: string,
+        verifier: string
+    ): Promise<{ accessToken: string; accessSecret: string; userId: string; username: string }> {
+        const url = 'https://api.twitter.com/oauth/access_token';
+        const method = 'POST';
+
+        const params = { oauth_verifier: verifier };
+        const authHeader = this.generateOAuthHeader(method, url, params, requestToken, requestSecret);
+
+        const response = await fetch(`${url}?oauth_verifier=${encodeURIComponent(verifier)}`, {
+            method,
+            headers: { 'Authorization': authHeader },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to get access token: ${await response.text()}`);
+        }
+
+        const text = await response.text();
+        const data = Object.fromEntries(new URLSearchParams(text));
+
+        return {
+            accessToken: data.oauth_token,
+            accessSecret: data.oauth_token_secret,
+            userId: data.user_id,
+            username: data.screen_name,
+        };
+    }
+
+    /**
      * Generate OAuth 1.0a Authorization header
      */
-    private generateOAuthHeader(method: string, url: string): string {
+    private generateOAuthHeader(
+        method: string,
+        url: string,
+        extraParams: Record<string, string> = {},
+        token?: string,
+        tokenSecret?: string
+    ): string {
         const oauthParams: Record<string, string> = {
             oauth_consumer_key: this.apiKey!,
             oauth_nonce: crypto.randomBytes(16).toString('hex'),
             oauth_signature_method: 'HMAC-SHA1',
             oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-            oauth_token: this.accessToken!,
             oauth_version: '1.0',
+            ...extraParams,
         };
+
+        if (token) {
+            oauthParams.oauth_token = token;
+        }
 
         // Create signature base string
         const sortedParams = Object.keys(oauthParams)
@@ -233,7 +311,7 @@ export class TwitterClient {
         ].join('&');
 
         // Create signing key
-        const signingKey = `${encodeURIComponent(this.apiSecret!)}&${encodeURIComponent(this.accessSecret!)}`;
+        const signingKey = `${encodeURIComponent(this.apiSecret!)}&${encodeURIComponent(tokenSecret || '')}`;
 
         // Generate signature
         const signature = crypto

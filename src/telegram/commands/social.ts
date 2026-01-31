@@ -8,6 +8,7 @@ import {
     manualScan,
     getRecentSignals,
 } from '../../social/monitor.js';
+import { twitterAccounts, pendingAuths } from '../../db/sqlite.js';
 
 /**
  * /scan - Manually scan social media for watchlist signals
@@ -58,15 +59,23 @@ export async function tweetCommand(ctx: Context) {
     }
 
     const twitter = getTwitterClient();
+    const userId = ctx.from?.id;
 
-    if (!twitter.canPost()) {
+    if (!userId) return;
+
+    // Check if user has linked their own account
+    const userAccount = twitterAccounts.get.get({ userId }) as any;
+    let customCreds = undefined;
+
+    if (userAccount) {
+        customCreds = {
+            accessToken: userAccount.access_token,
+            accessSecret: userAccount.access_secret
+        };
+    } else if (!twitter.canPost()) {
         await ctx.reply(
             '❌ Twitter posting not configured.\n\n' +
-            'Set these in your `.env`:\n' +
-            '• `TWITTER_API_KEY`\n' +
-            '• `TWITTER_API_SECRET`\n' +
-            '• `TWITTER_ACCESS_TOKEN`\n' +
-            '• `TWITTER_ACCESS_SECRET`',
+            'You can link your own Twitter account using `/link` to post tweets!',
             { parse_mode: 'Markdown' }
         );
         return;
@@ -75,15 +84,104 @@ export async function tweetCommand(ctx: Context) {
     await ctx.reply('📤 Posting tweet...');
 
     try {
-        const result = await twitter.postTweet(tweetText);
+        const result = await twitter.postTweet(tweetText, customCreds);
         await ctx.reply(
-            `✅ Tweet posted!\n\n` +
+            `✅ Tweet posted ${userAccount ? 'from your account' : ''}!\n\n` +
             `🔗 https://twitter.com/i/status/${result.id}`,
             { parse_mode: 'Markdown' }
         );
     } catch (error: any) {
         console.error('Tweet error:', error);
         await ctx.reply(`❌ Failed to post: ${error.message || 'Unknown error'}`);
+    }
+}
+
+/**
+ * /link - Start Twitter account linking flow
+ */
+export async function linkCommand(ctx: Context) {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+
+    const twitter = getTwitterClient();
+
+    try {
+        await ctx.reply('🔗 Generating authorization link...');
+
+        // Use "oob" for PIN-based flow
+        const { token, secret } = await twitter.getRequestToken('oob');
+
+        // Store request token/secret temporarily
+        pendingAuths.upsert.run({ userId, requestToken: token, requestSecret: secret });
+
+        const authUrl = `https://api.twitter.com/oauth/authorize?oauth_token=${token}`;
+
+        await ctx.reply(
+            `🦞 *Link your Twitter Account*\n\n` +
+            `1. Click the link below and authorize the app:\n` +
+            `🔗 [Authorize on Twitter](${authUrl})\n\n` +
+            `2. After authorizing, you will get a PIN.\n` +
+            `3. Send the PIN here using: \`/verify <PIN>\`\n\n` +
+            `_This allows MemeClaw to post tweets on your behalf._`,
+            { parse_mode: 'Markdown' }
+        );
+    } catch (error: any) {
+        console.error('Link command error:', error);
+        await ctx.reply(`❌ Failed to start linking: ${error.message}`);
+    }
+}
+
+/**
+ * /verify <PIN> - Complete Twitter linking
+ */
+export async function verifyCommand(ctx: Context) {
+    const userId = ctx.from?.id;
+    const text = (ctx.message as any)?.text || '';
+    const pin = text.replace(/^\/verify\s*/i, '').trim();
+
+    if (!userId) return;
+
+    if (!pin) {
+        await ctx.reply('❌ Please provide the PIN. Usage: `/verify <PIN>`');
+        return;
+    }
+
+    const pending = pendingAuths.get.get({ userId }) as any;
+
+    if (!pending) {
+        await ctx.reply('❌ No pending linking request found. Use `/link` first.');
+        return;
+    }
+
+    await ctx.reply('⏳ Verifying PIN and linking account...');
+
+    try {
+        const twitter = getTwitterClient();
+        const { accessToken, accessSecret, username } = await twitter.getAccessToken(
+            pending.request_token,
+            pending.request_secret,
+            pin
+        );
+
+        // Store final tokens
+        twitterAccounts.upsert.run({
+            userId,
+            accessToken,
+            accessSecret,
+            username
+        });
+
+        // Clean up pending auth
+        pendingAuths.remove.run({ userId });
+
+        await ctx.reply(
+            `✅ *Success!* Your Twitter account (@${username}) is now linked.\n\n` +
+            `Now when you use \`/tweet\`, it will post directly to your personal feed!`,
+            { parse_mode: 'Markdown' }
+        );
+    } catch (error: any) {
+        console.error('Verify command error:', error);
+        await ctx.reply(`❌ Failed to link account: ${error.message}`);
     }
 }
 

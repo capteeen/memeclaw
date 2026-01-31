@@ -11,7 +11,9 @@ import {
     scanCommand,
     tweetCommand,
     generateCommand,
-    monitorCommand
+    monitorCommand,
+    linkCommand,
+    verifyCommand
 } from './commands/social.js';
 
 export const bot = new Telegraf(config.telegramBotToken);
@@ -66,6 +68,7 @@ export function setupBot() {
                 `/scan - Search for bullish signals\n` +
                 `/generate <token> - AI tweet ideas\n` +
                 `/tweet <msg> - Post to Twitter/X\n` +
+                `/link - Connect your account\n` +
                 `/monitor - Social scan status\n\n` +
                 `*More:*\n` +
                 `/watchlist - Manage keywords\n` +
@@ -88,6 +91,8 @@ export function setupBot() {
     bot.command('tweet', tweetCommand);
     bot.command('generate', generateCommand);
     bot.command('monitor', monitorCommand);
+    bot.command('link', linkCommand);
+    bot.command('verify', verifyCommand);
 
     // Error handling
     bot.catch((err, ctx) => {
@@ -113,6 +118,8 @@ export async function startBot() {
         { command: 'tweet', description: '📤 Post a tweet' },
         { command: 'generate', description: '🤖 AI tweet generator' },
         { command: 'monitor', description: '📡 Social monitor status' },
+        { command: 'link', description: '🔗 Link Twitter account' },
+        { command: 'verify', description: '✅ Verify Twitter PIN' },
         { command: 'help', description: '❓ Show all commands' },
     ]);
 

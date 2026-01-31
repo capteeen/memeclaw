@@ -57,6 +57,24 @@ export function initDatabase() {
       label TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- Twitter accounts table for per-user posting
+    CREATE TABLE IF NOT EXISTS twitter_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      access_token TEXT NOT NULL,
+      access_secret TEXT NOT NULL,
+      username TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Pending Twitter auths for OAuth flow
+    CREATE TABLE IF NOT EXISTS pending_auths (
+      user_id INTEGER PRIMARY KEY,
+      request_token TEXT NOT NULL,
+      request_secret TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Migration: If wallets table exists with old schema, we might need a backup or manual fix
@@ -185,5 +203,82 @@ export const signals = {
       `);
     }
     return _signalsStatements.getRecent;
+  },
+};
+
+// Twitter account helpers
+let _twitterStatements: any = null;
+export const twitterAccounts = {
+  get get() {
+    if (!_twitterStatements) _twitterStatements = {};
+    if (!_twitterStatements.get) {
+      _twitterStatements.get = db.prepare(`
+        SELECT * FROM twitter_accounts WHERE user_id = @userId
+      `);
+    }
+    return _twitterStatements.get;
+  },
+
+  get upsert() {
+    if (!_twitterStatements) _twitterStatements = {};
+    if (!_twitterStatements.upsert) {
+      _twitterStatements.upsert = db.prepare(`
+        INSERT INTO twitter_accounts (user_id, access_token, access_secret, username)
+        VALUES (@userId, @accessToken, @accessSecret, @username)
+        ON CONFLICT(user_id) DO UPDATE SET
+          access_token = excluded.access_token,
+          access_secret = excluded.access_secret,
+          username = excluded.username
+      `);
+    }
+    return _twitterStatements.upsert;
+  },
+
+  get remove() {
+    if (!_twitterStatements) _twitterStatements = {};
+    if (!_twitterStatements.remove) {
+      _twitterStatements.remove = db.prepare(`
+        DELETE FROM twitter_accounts WHERE user_id = @userId
+      `);
+    }
+    return _twitterStatements.remove;
+  },
+};
+
+// Pending auth helpers
+export const pendingAuths = {
+  get upsert() {
+    if (!_twitterStatements) _twitterStatements = {};
+    if (!_twitterStatements.upsertAuth) {
+      _twitterStatements.upsertAuth = db.prepare(`
+        INSERT INTO pending_auths (user_id, request_token, request_secret)
+        VALUES (@userId, @requestToken, @requestSecret)
+        ON CONFLICT(user_id) DO UPDATE SET
+          request_token = excluded.request_token,
+          request_secret = excluded.request_secret,
+          created_at = CURRENT_TIMESTAMP
+      `);
+    }
+    return _twitterStatements.upsertAuth;
+  },
+
+  get get() {
+    if (!_twitterStatements) _twitterStatements = {};
+    if (!_twitterStatements.getAuth) {
+      _twitterStatements.getAuth = db.prepare(`
+        SELECT * FROM pending_auths WHERE user_id = @userId
+      `);
+    }
+    return _twitterStatements.getAuth;
+  },
+
+  get remove() {
+    if (!_twitterStatements) _twitterStatements = {};
+    if (!_twitterStatements.removeAuth) {
+      _twitterStatements.removeAuth = db.prepare(`
+        DELETE FROM pending_auths WHERE user_id = @userId
+      `);
+    }
+    return _twitterStatements.removeAuth;
   },
 };
